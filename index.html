@@ -1,0 +1,115 @@
+<html>
+<head>
+	<title></title>
+	<style type="text/css">
+		#chat {
+			height: 500px;
+			overflow: auto;
+		}
+		#contentWrap {
+			display: none;
+		}
+
+		#chatWrap {
+			float: left;
+			border: 1px #000 solid;
+		}
+	</style>
+</head>
+<body>
+	<div id="nickWrap">
+		<p>Enter A username</p>
+		<p id="nickError"></p>
+		<form id="setNick">
+			<input size="35" id="nickname">
+			<input type="submit">
+		</form>
+	</div>
+
+	<div id="contentWrap">
+		<div id="notif"></div>
+		<button class="hide">Hide</button>
+		<div id="chatWrap">
+			<div id="chat">
+			</div>
+				<form id="send-message">
+					<input size="35" id="message">
+					<input type="submit">
+				</form>
+		</div>
+		<div id="users"></div>
+	</div>
+	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+	<script src="node_modules/socket.io/node_modules/socket.io-client/socket.io.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+			var socket = io.connect('//localhost:8080');
+			var $messageForm = $('#send-message');
+			var $messageBox = $('#message');
+			var $chat = $('#chat');
+			var $user = $('#users');
+			var $nickForm = $('#setNick');
+			var $nickError = $('#nickError');
+			var $nickBox = $('#nickname');
+			$('.hide').on('click',function(){
+				$chat.toggle();
+				if($chat.is(':visible')) {
+					socket.emit('reset notif',true);
+					$('#notif').html('');
+				}
+
+			});
+			$nickForm.submit(function (e){
+				e.preventDefault();
+				socket.emit('new user',$nickBox.val(),function(data){
+					if(data) {
+						$('#nickWrap').hide();
+						$('#contentWrap').show();
+					}else {
+						$nickError.html('that username is already taken');
+					}
+				});
+				// socket.on('Display Chat',function(data){
+				// 	// var chat = '';
+				// 	$.each(data,function(n, val){
+				// 		$chat.html('<b>'+val.nama+' :</b>'+ val.chat + "<br>");
+				// 	});
+				// });
+				$nickBox.val('');
+			});
+
+			$messageForm.submit(function (e){
+				e.preventDefault();
+				socket.emit('send message',$messageBox.val());
+				$messageBox.val('');
+			});
+			socket.on('usernames',function(data){
+				var html = '';
+				for(i=0;i < data.length; i++){
+					html += data[i] + '<br>';
+				}
+				$user.html(html);
+			});
+			socket.on('new message',function(data){
+				$.each(data,function(n,val){
+					$chat.append('<b>'+val.nama+' :</b>'+val.chat + "<br>");
+				});
+
+			});
+			socket.on('output',function(data){
+				$.each(data,function(n,val){
+					$chat.append('<b>'+val.nama+': </b>'+val.chat+"<br>");
+				});
+				console.log(data);
+			});
+			socket.on('new notif',function(data){
+				if($chat.is(":hidden")) {
+					$('#notif').html(data+' New Message');
+				}else {
+					$('#notif').html('');
+				}
+			});
+		});
+	</script>
+</body>
+</html>
